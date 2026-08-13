@@ -45,6 +45,14 @@ An open-source, hands-free, sub-second latency voice-to-voice interaction suite 
 * **Global Agent Hook**: Integrated via a global `Stop` hook (`hooks.json`) so any new chat conversation automatically speaks responses.
 * **Self-Healing Launch Orchestration**: A Systemd User Service (`jarvis.service`) that automatically starts the API Gateway (OmniRoute), TTS Server, VAD Daemon, and Hackathon Server on user login.
 
+## 💻 Operating System Compatibility
+
+| OS | Status | Notes |
+| :--- | :--- | :--- |
+| **Linux** | 🟢 Native (Supported) | Full features: uses PipeWire (`pw-play`), Systemd User units, and `xdotool` out-of-the-box. |
+| **macOS** | 🟡 Adaptable (In Progress) | Needs changing `pw-play` to `afplay`, systemd to `launchd`, and `xdotool` to AppleScript (`osascript`) keystrokes. |
+| **Windows** | 🟡 Adaptable (WSL / Native) | Runs inside WSL, or natively by swapping `pw-play` for `winsound` or `mpv.exe` and `xdotool` for Python's `pyautogui`/`pynput` key injection. |
+
 ---
 
 ## 📂 Repository Structure
