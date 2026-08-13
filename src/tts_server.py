@@ -92,15 +92,17 @@ class TTSRequestHandler(BaseHTTPRequestHandler):
                         if max_val > 0:
                             audio = audio / max_val
                         
-                        reply_wav = os.path.expanduser("~/.jarvis/voice_reply.wav")
+                        reply_wav = "/home/dhanush/.gemini/antigravity-cli/brain/17b334d6-01a3-4449-b4a8-a53b45711b5e/voice_reply.wav"
                         sf.write(reply_wav, audio, 24000, subtype='PCM_16')
                         
                         # Set active playback flag
                         with playback_lock:
                             playback_active = True
                         
+                        auto_listen = payload.get("auto_listen", False)
+                        
                         # Play to speaker using robust pw-play command
-                        def play_and_reset():
+                        def play_and_reset(auto_listen_flag):
                             global playback_active, active_playback_proc
                             try:
                                 active_playback_proc = subprocess.Popen(["pw-play", reply_wav])
@@ -109,8 +111,15 @@ class TTSRequestHandler(BaseHTTPRequestHandler):
                                 print(f"Playback failed: {pe}")
                             with playback_lock:
                                 playback_active = False
+                            
+                            if auto_listen_flag:
+                                try:
+                                    dictate_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dictate_continuous.py")
+                                    subprocess.Popen([sys.executable, dictate_script, "--oneshot"])
+                                except Exception as de:
+                                    print(f"Failed to auto-trigger oneshot dictation: {de}")
                         
-                        threading.Thread(target=play_and_reset).start()
+                        threading.Thread(target=play_and_reset, args=(auto_listen,)).start()
                     except Exception as e:
                         print(f"Synthesis failed: {e}")
                         with playback_lock:
