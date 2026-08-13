@@ -32,7 +32,7 @@ def check_wakeword(audio_data) -> bool:
     try:
         with open(temp_path, "rb") as f:
             files = {"file": ("wakeword.wav", f, "audio/wav")}
-            data = {"model": STT_MODEL}
+            data = {"model": STT_MODEL, "language": "en"}
             r = requests.post(f"{API_URL}/audio/transcriptions", headers=headers, files=files, data=data, timeout=3)
             if r.status_code == 200:
                 text = r.json().get("text", "").lower().strip(" .!?")

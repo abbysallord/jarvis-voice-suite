@@ -202,7 +202,8 @@ def main():
             "Authorization": f"Bearer {API_KEY}"
         }
         data = {
-            "model": STT_MODEL
+            "model": STT_MODEL,
+            "language": "en"
         }
         
         text = ""
