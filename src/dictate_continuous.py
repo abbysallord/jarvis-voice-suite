@@ -53,51 +53,62 @@ def signal_handler(signum, frame):
     sys.exit(0)
 
 def main():
+    oneshot = "--oneshot" in sys.argv
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
-    # Toggle Check: If already running, kill it
-    if os.path.exists(PID_FILE):
-        try:
-            with open(PID_FILE, 'r') as f:
-                old_pid = int(f.read().strip())
-            os.kill(old_pid, signal.SIGTERM)
-            print(f"Terminated existing dictation daemon with PID {old_pid}")
-            sys.exit(0)
-        except ProcessLookupError:
-            pass
-        except ValueError:
-            pass
+    if not oneshot:
+        # Toggle Check: If already running, kill it
+        if os.path.exists(PID_FILE):
+            try:
+                with open(PID_FILE, 'r') as f:
+                    old_pid = int(f.read().strip())
+                os.kill(old_pid, signal.SIGTERM)
+                print(f"Terminated existing dictation daemon with PID {old_pid}")
+                sys.exit(0)
+            except ProcessLookupError:
+                pass
+            except ValueError:
+                pass
 
-    # Save active PID
-    with open(PID_FILE, 'w') as f:
-        f.write(str(os.getpid()))
+        # Save active PID
+        with open(PID_FILE, 'w') as f:
+            f.write(str(os.getpid()))
 
-    # High double-beep for Toggle-ON
-    play_beep(1000, 0.08, count=2)
+    # Start audio beeps
+    if oneshot:
+        # Single high beep for oneshot recording start
+        play_beep(1000, 0.08, count=1)
+    else:
+        # High double-beep for Toggle-ON
+        play_beep(1000, 0.08, count=2)
+
     try:
         requests.post("http://localhost:20129/interrupt", timeout=0.5)
     except Exception:
         pass
-    print(f"Continuous dictation daemon started with PID {os.getpid()}")
+
+    if oneshot:
+        print(f"One-shot dictation started with PID {os.getpid()}")
+    else:
+        print(f"Continuous dictation daemon started with PID {os.getpid()}")
 
     sample_rate = 16000
     chunk_size = 1024
-
     was_playing = False
-    while True:
-        # Check if the AI is currently speaking
-        if is_tts_playing():
-            was_playing = True
-            time.sleep(0.3)
-            continue
-            
-        if was_playing:
-            # Let hardware output buffers completely clear
-            time.sleep(1.2)
-            was_playing = False
 
-        # 1. Calibrate noise floor at the start of this loop iteration
+    while True:
+        if not oneshot:
+            if is_tts_playing():
+                was_playing = True
+                time.sleep(0.3)
+                continue
+                
+            if was_playing:
+                time.sleep(1.2)
+                was_playing = False
+
+        # 1. Calibrate noise floor
         ambient_frames = []
         try:
             with sd.InputStream(samplerate=sample_rate, channels=1, blocksize=chunk_size, dtype='float32') as stream:
@@ -105,29 +116,33 @@ def main():
                     data, _ = stream.read(chunk_size)
                     ambient_frames.append(np.sqrt(np.mean(data**2)))
         except Exception:
+            if oneshot:
+                play_beep(400, 0.15, count=1)
+                sys.exit(1)
             time.sleep(1)
             continue
 
         ambient_noise = np.mean(ambient_frames)
-        # Proven sensitivity settings from dictate.py
         threshold = max(ambient_noise * 1.5, 0.003)
 
-        # 2. Record audio using static threshold VAD
+        # 2. Record audio
         frames = []
         speech_detected = False
         silent_chunks = 0
         active_chunks_count = 0
         
         max_silence_chunks = int(1.2 * sample_rate / chunk_size)    # 1.2s silence
-        max_initial_silence = int(4.0 * sample_rate / chunk_size)  # 4s timeout
-        max_total_chunks = int(120.0 * sample_rate / chunk_size)   # 120s limit
+        max_initial_silence = int(3.0 * sample_rate / chunk_size)  # 3s timeout for oneshot
+        if not oneshot:
+            max_initial_silence = int(4.0 * sample_rate / chunk_size)
+        max_total_chunks = int(120.0 * sample_rate / chunk_size)
 
         try:
             with sd.InputStream(samplerate=sample_rate, channels=1, blocksize=chunk_size, dtype='float32') as stream:
                 for chunk_idx in range(max_total_chunks):
-                    if is_tts_playing():
+                    if not oneshot and is_tts_playing():
                         break
-                        
+                            
                     data, _ = stream.read(chunk_size)
                     frames.append(data.copy())
                     
@@ -147,11 +162,17 @@ def main():
                     if not speech_detected and chunk_idx > max_initial_silence:
                         break
         except Exception:
+            if oneshot:
+                play_beep(400, 0.15, count=1)
+                sys.exit(1)
             time.sleep(1)
             continue
 
-        # Enforce minimum active chunks to ignore transient clicks
+        # Enforce minimum active chunks
         if not speech_detected or len(frames) < 12 or active_chunks_count < 3:
+            if oneshot:
+                play_beep(400, 0.15, count=1)
+                sys.exit(0)
             continue
 
         # Process captured speech
@@ -178,9 +199,15 @@ def main():
                 result = response.json()
                 text = result.get("text", "").strip()
         except Exception:
+            if oneshot:
+                play_beep(400, 0.15, count=1)
+                sys.exit(1)
             continue
 
         if not text:
+            if oneshot:
+                play_beep(400, 0.15, count=1)
+                sys.exit(0)
             continue
 
         # Whisper hallucinations filter
@@ -196,6 +223,9 @@ def main():
         
         if len(text) < 4 or cleaned_text in hallucinations:
             print(f"Discarded noise/hallucination: '{text}'")
+            if oneshot:
+                play_beep(400, 0.15, count=1)
+                sys.exit(0)
             continue
 
         # Play short acknowledgement beep
@@ -207,6 +237,9 @@ def main():
             subprocess.run(["xdotool", "key", "Return"])
         except Exception:
             pass
+
+        if oneshot:
+            sys.exit(0)
 
         # Cool-down to prevent self-triggering
         time.sleep(2.5)
