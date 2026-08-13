@@ -3,15 +3,22 @@ import subprocess
 import time
 import socket
 import os
+import sys
 
-VENV_PYTHON = "/home/dhanush/Projects/Experiments/.venv_kittentts/bin/python"
-SYS_PYTHON = "python"
-TTS_SCRIPT = "/home/dhanush/Projects/Experiments/tts_server.py"
-DICTATE_SCRIPT = "/home/dhanush/Projects/Experiments/dictate_continuous.py"
-SIH_SCRIPT = "/home/dhanush/Projects/Experiments/sih_server.py"
-OMNIROUTE_CMD = ["node", "/home/dhanush/.npm-global/lib/node_modules/omniroute/bin/omniroute.mjs", "serve"]
+BASE_DIR = os.path.expanduser("~/.jarvis")
+VENV_PYTHON = os.path.join(BASE_DIR, ".venv/bin/python")
+SYS_PYTHON = sys.executable or "python3"
+TTS_SCRIPT = os.path.join(BASE_DIR, "tts_server.py")
+DICTATE_SCRIPT = os.path.join(BASE_DIR, "dictate_continuous.py")
+SIH_SCRIPT = os.path.join(BASE_DIR, "sih_server.py")
 
-LOG_DIR = "/home/dhanush/Projects/Experiments/logs"
+npm_global = os.path.expanduser("~/.npm-global/lib/node_modules/omniroute/bin/omniroute.mjs")
+if os.path.exists(npm_global):
+    OMNIROUTE_CMD = ["node", npm_global, "serve"]
+else:
+    OMNIROUTE_CMD = ["omniroute", "serve"]
+
+LOG_DIR = os.path.join(BASE_DIR, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 def is_port_open(port):
