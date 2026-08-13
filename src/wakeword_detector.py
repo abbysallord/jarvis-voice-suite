@@ -39,7 +39,7 @@ def check_wakeword(audio_data) -> bool:
                 print(f"[WakeWord] Transcribed segment: '{text}'")
                 
                 # Check for phonetic variations of "Jarvis"
-                keywords = ["jarvis", "jarves", "hey jarvis", "hi jarvis", "charles", "charlie", "travis", "service"]
+                keywords = ["jarvis", "jarves", "hey jarvis", "hi jarvis", "charles", "charlie", "travis", "service", "hirs", "hrvs", "harvest", "harvis", "artist", "office", "habas", "hobby", "harness"]
                 for kw in keywords:
                     if kw in text:
                         return True
@@ -70,10 +70,6 @@ def main():
     threshold = max(ambient_noise * 1.5, 0.002) # More sensitive threshold to trigger easily on speech
     print(f"⚙️ Calibrated Wake-Word threshold: {threshold:.5f} (Ambient: {ambient_noise:.5f})")
     
-    buffer_seconds = 1.6
-    buffer_chunks = int(buffer_seconds * SAMPLE_RATE / CHUNK_SIZE)
-    
-    audio_buffer = []
     triggered = False
     
     try:
@@ -82,29 +78,23 @@ def main():
                 # If TTS is speaking or dictation is already running, sleep and skip
                 if is_tts_playing():
                     time.sleep(0.5)
-                    audio_buffer = []
                     continue
                 
                 data, _ = stream.read(CHUNK_SIZE)
                 rms = np.sqrt(np.mean(data**2))
                 
-                # Track a sliding window of audio chunks
-                audio_buffer.append(data.copy())
-                if len(audio_buffer) > buffer_chunks:
-                    audio_buffer.pop(0)
-                    
                 # Trigger transcription verification if sound exceeds threshold
-                if rms > threshold and len(audio_buffer) >= buffer_chunks and not triggered:
+                if rms > threshold and not triggered:
                     triggered = True
-                    print("[WakeWord] Sound event detected. Verifying...")
+                    print("[WakeWord] Sound event detected. Capturing wake phrase...")
                     
-                    # Capture another 0.4s to catch the end of "Jarvis"
-                    extra_frames = []
-                    for _ in range(int(0.4 * SAMPLE_RATE / CHUNK_SIZE)):
+                    # Record 1.6s of future audio containing the wake phrase
+                    wake_frames = []
+                    for _ in range(int(1.6 * SAMPLE_RATE / CHUNK_SIZE)):
                         d, _ = stream.read(CHUNK_SIZE)
-                        extra_frames.append(d.copy())
+                        wake_frames.append(d.copy())
                         
-                    full_segment = np.concatenate(audio_buffer + extra_frames)
+                    full_segment = np.concatenate(wake_frames)
                     
                     # Verify wake word via fast STT
                     if check_wakeword(full_segment):
@@ -120,7 +110,6 @@ def main():
                         # Cool-down to prevent rapid double-checks on ambient noise spikes
                         time.sleep(1.5)
                         
-                    audio_buffer = []
                     triggered = False
                     
     except KeyboardInterrupt:
