@@ -92,7 +92,7 @@ class TTSRequestHandler(BaseHTTPRequestHandler):
                         if max_val > 0:
                             audio = audio / max_val
                         
-                        reply_wav = "/home/dhanush/.gemini/antigravity-cli/brain/17b334d6-01a3-4449-b4a8-a53b45711b5e/voice_reply.wav"
+                        reply_wav = os.path.expanduser("~/.jarvis/voice_reply.wav")
                         sf.write(reply_wav, audio, 24000, subtype='PCM_16')
                         
                         # Set active playback flag
