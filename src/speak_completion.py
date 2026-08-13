@@ -111,9 +111,19 @@ def main():
             except Exception:
                 pass
 
+            # Check if auto_listen should be triggered (if conversation started by voice dictation)
+            auto_listen = False
+            flag_path = "/tmp/voice_initiated.flag"
+            if os.path.exists(flag_path):
+                auto_listen = True
+                try:
+                    os.unlink(flag_path)
+                except OSError:
+                    pass
+
             # Post to the local TTS server on port 20129
             try:
-                data = json.dumps({"text": clean_text}).encode("utf-8")
+                data = json.dumps({"text": clean_text, "auto_listen": auto_listen}).encode("utf-8")
                 req = urllib.request.Request(
                     "http://localhost:20129/speak",
                     data=data,
