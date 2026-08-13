@@ -62,17 +62,18 @@ def main():
         else:
             print("[!] Warning: TTS Server is taking a long time to bind. Continuing...")
 
-    # 3. Start Continuous Dictation Daemon
-    if check_process_running(DICTATE_SCRIPT):
-        print("[✓] Continuous Dictation Daemon is already running")
+    # 3. Start Wake-Word Detector Daemon
+    WAKEWORD_SCRIPT = "/home/dhanush/Projects/Experiments/wakeword_detector.py"
+    if check_process_running(WAKEWORD_SCRIPT):
+        print("[✓] Wake-Word Detector Daemon is already running")
     else:
-        print("[ ] Starting Continuous Dictation Daemon...")
-        start_daemon([VENV_PYTHON, DICTATE_SCRIPT], "dictate_continuous.log")
+        print("[ ] Starting Wake-Word Detector Daemon...")
+        start_daemon([VENV_PYTHON, WAKEWORD_SCRIPT], "wakeword_detector.log")
         time.sleep(1)
-        if check_process_running(DICTATE_SCRIPT):
-            print("[✓] Dictation Daemon started successfully")
+        if check_process_running(WAKEWORD_SCRIPT):
+            print("[✓] Wake-Word Detector started successfully")
         else:
-            print("[!] Error: Dictation Daemon failed to start. Check logs/dictate_continuous.log")
+            print("[!] Error: Wake-Word Detector failed to start. Check logs/wakeword_detector.log")
 
     # 4. Start SIH Diagnostics Server on Port 20130
     if is_port_open(20130):
