@@ -67,7 +67,7 @@ def main():
         sys.exit(1)
         
     ambient_noise = np.mean(ambient_frames)
-    threshold = max(ambient_noise * 1.8, 0.005) # Slightly higher threshold for wake trigger
+    threshold = max(ambient_noise * 1.5, 0.002) # More sensitive threshold to trigger easily on speech
     print(f"⚙️ Calibrated Wake-Word threshold: {threshold:.5f} (Ambient: {ambient_noise:.5f})")
     
     buffer_seconds = 1.6

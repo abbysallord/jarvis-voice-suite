@@ -53,7 +53,7 @@ def main():
         print("[✓] TTS Server is already running on port 20129")
     else:
         print("[ ] Starting TTS Server...")
-        start_daemon([VENV_PYTHON, TTS_SCRIPT], "tts_server.log")
+        start_daemon([VENV_PYTHON, "-u", TTS_SCRIPT], "tts_server.log")
         for _ in range(20):
             if is_port_open(20129):
                 print("[✓] TTS Server initialized successfully on port 20129")
@@ -68,7 +68,7 @@ def main():
         print("[✓] Wake-Word Detector Daemon is already running")
     else:
         print("[ ] Starting Wake-Word Detector Daemon...")
-        start_daemon([VENV_PYTHON, WAKEWORD_SCRIPT], "wakeword_detector.log")
+        start_daemon([VENV_PYTHON, "-u", WAKEWORD_SCRIPT], "wakeword_detector.log")
         time.sleep(1)
         if check_process_running(WAKEWORD_SCRIPT):
             print("[✓] Wake-Word Detector started successfully")
@@ -80,7 +80,7 @@ def main():
         print("[✓] SIH Server is already running on port 20130")
     else:
         print("[ ] Starting SIH Diagnostics Server...")
-        start_daemon([SYS_PYTHON, SIH_SCRIPT], "sih_server.log")
+        start_daemon([SYS_PYTHON, "-u", SIH_SCRIPT], "sih_server.log")
         time.sleep(1.5)
         if is_port_open(20130):
             print("[✓] SIH Diagnostics Server initialized on port 20130")
@@ -93,7 +93,7 @@ def main():
         print("[✓] Jarvis HUD is already running")
     else:
         print("[ ] Starting Jarvis HUD Overlay...")
-        start_daemon([SYS_PYTHON, HUD_SCRIPT], "jarvis_hud.log")
+        start_daemon([SYS_PYTHON, "-u", HUD_SCRIPT], "jarvis_hud.log")
         time.sleep(1)
         if check_process_running(HUD_SCRIPT):
             print("[✓] Jarvis HUD started successfully")
