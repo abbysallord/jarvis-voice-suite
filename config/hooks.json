@@ -1,0 +1,10 @@
+{
+  "jarvis-voice": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "/home/dhanush/Projects/Experiments/speak_completion.py"
+      }
+    ]
+  }
+}
