@@ -13,6 +13,14 @@ API_KEY = os.environ.get("OMNIROUTE_API_KEY", "anonymous")
 STT_MODEL = os.environ.get("OMNIROUTE_STT_MODEL", "groq/whisper-large-v3-turbo")
 PID_FILE = "/tmp/dictate_continuous.pid"
 
+def set_hud_state(state, text=""):
+    try:
+        with open("/tmp/jarvis_hud_state.json", "w") as f:
+            import json
+            json.dump({"state": state, "text": text}, f)
+    except Exception:
+        pass
+
 def play_beep(freq=880, duration=0.08, count=1):
     try:
         sample_rate = 16000
@@ -44,6 +52,7 @@ def is_tts_playing() -> bool:
     return False
 
 def signal_handler(signum, frame):
+    set_hud_state("idle")
     if os.path.exists(PID_FILE):
         try:
             os.unlink(PID_FILE)
@@ -108,6 +117,9 @@ def main():
                 time.sleep(1.2)
                 was_playing = False
 
+        # Update HUD state to listening
+        set_hud_state("listening")
+
         # 1. Calibrate noise floor
         ambient_frames = []
         try:
@@ -163,6 +175,7 @@ def main():
                         break
         except Exception:
             if oneshot:
+                set_hud_state("idle")
                 play_beep(400, 0.15, count=1)
                 sys.exit(1)
             time.sleep(1)
@@ -171,6 +184,7 @@ def main():
         # Enforce minimum active chunks
         if not speech_detected or len(frames) < 12 or active_chunks_count < 3:
             if oneshot:
+                set_hud_state("idle")
                 play_beep(400, 0.15, count=1)
                 sys.exit(0)
             continue
@@ -179,6 +193,9 @@ def main():
         audio_data = np.concatenate(frames)
         temp_record_path = "/tmp/dictate_continuous_input.wav"
         sf.write(temp_record_path, audio_data, sample_rate, subtype='PCM_16')
+
+        # Update HUD state to thinking/processing
+        set_hud_state("thinking")
 
         # Transcribe
         headers = {
@@ -200,12 +217,14 @@ def main():
                 text = result.get("text", "").strip()
         except Exception:
             if oneshot:
+                set_hud_state("idle")
                 play_beep(400, 0.15, count=1)
                 sys.exit(1)
             continue
 
         if not text:
             if oneshot:
+                set_hud_state("idle")
                 play_beep(400, 0.15, count=1)
                 sys.exit(0)
             continue
@@ -224,6 +243,7 @@ def main():
         if len(text) < 4 or cleaned_text in hallucinations:
             print(f"Discarded noise/hallucination: '{text}'")
             if oneshot:
+                set_hud_state("idle")
                 play_beep(400, 0.15, count=1)
                 sys.exit(0)
             continue
@@ -231,6 +251,13 @@ def main():
         # Play short acknowledgement beep
         play_beep(1200, 0.05, count=1)
         
+        # Write voice initiated flag to trigger automatic continuous listen after speech playback
+        try:
+            with open("/tmp/voice_initiated.flag", "w") as flag_file:
+                flag_file.write("1")
+        except Exception:
+            pass
+
         # Type text and press Return
         try:
             subprocess.run(["xdotool", "type", "--delay", "5", text])

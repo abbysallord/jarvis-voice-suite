@@ -95,6 +95,13 @@ class TTSRequestHandler(BaseHTTPRequestHandler):
                         reply_wav = "/home/dhanush/.gemini/antigravity-cli/brain/17b334d6-01a3-4449-b4a8-a53b45711b5e/voice_reply.wav"
                         sf.write(reply_wav, audio, 24000, subtype='PCM_16')
                         
+                        # Update HUD state to speaking
+                        try:
+                            with open("/tmp/jarvis_hud_state.json", "w") as f:
+                                json.dump({"state": "speaking", "text": clean_text}, f)
+                        except Exception:
+                            pass
+
                         # Set active playback flag
                         with playback_lock:
                             playback_active = True
@@ -118,6 +125,12 @@ class TTSRequestHandler(BaseHTTPRequestHandler):
                                     subprocess.Popen([sys.executable, dictate_script, "--oneshot"])
                                 except Exception as de:
                                     print(f"Failed to auto-trigger oneshot dictation: {de}")
+                            else:
+                                try:
+                                    with open("/tmp/jarvis_hud_state.json", "w") as f:
+                                        json.dump({"state": "idle", "text": ""}, f)
+                                except Exception:
+                                    pass
                         
                         threading.Thread(target=play_and_reset, args=(auto_listen,)).start()
                     except Exception as e:

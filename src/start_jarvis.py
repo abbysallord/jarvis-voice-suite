@@ -3,22 +3,15 @@ import subprocess
 import time
 import socket
 import os
-import sys
 
-BASE_DIR = os.path.expanduser("~/.jarvis")
-VENV_PYTHON = os.path.join(BASE_DIR, ".venv/bin/python")
-SYS_PYTHON = sys.executable or "python3"
-TTS_SCRIPT = os.path.join(BASE_DIR, "tts_server.py")
-DICTATE_SCRIPT = os.path.join(BASE_DIR, "dictate_continuous.py")
-SIH_SCRIPT = os.path.join(BASE_DIR, "sih_server.py")
+VENV_PYTHON = "/home/dhanush/Projects/Experiments/.venv_kittentts/bin/python"
+SYS_PYTHON = "python"
+TTS_SCRIPT = "/home/dhanush/Projects/Experiments/tts_server.py"
+DICTATE_SCRIPT = "/home/dhanush/Projects/Experiments/dictate_continuous.py"
+SIH_SCRIPT = "/home/dhanush/Projects/Experiments/sih_server.py"
+OMNIROUTE_CMD = ["node", "/home/dhanush/.npm-global/lib/node_modules/omniroute/bin/omniroute.mjs", "serve"]
 
-npm_global = os.path.expanduser("~/.npm-global/lib/node_modules/omniroute/bin/omniroute.mjs")
-if os.path.exists(npm_global):
-    OMNIROUTE_CMD = ["node", npm_global, "serve"]
-else:
-    OMNIROUTE_CMD = ["omniroute", "serve"]
-
-LOG_DIR = os.path.join(BASE_DIR, "logs")
+LOG_DIR = "/home/dhanush/Projects/Experiments/logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 def is_port_open(port):
@@ -92,6 +85,19 @@ def main():
             print("[✓] SIH Diagnostics Server initialized on port 20130")
         else:
             print("[!] Error: SIH Server failed to bind. Check logs/sih_server.log")
+
+    # 5. Start Jarvis HUD Overlay
+    HUD_SCRIPT = "/home/dhanush/Projects/Experiments/jarvis_hud.py"
+    if check_process_running(HUD_SCRIPT):
+        print("[✓] Jarvis HUD is already running")
+    else:
+        print("[ ] Starting Jarvis HUD Overlay...")
+        start_daemon([SYS_PYTHON, HUD_SCRIPT], "jarvis_hud.log")
+        time.sleep(1)
+        if check_process_running(HUD_SCRIPT):
+            print("[✓] Jarvis HUD started successfully")
+        else:
+            print("[!] Error: Jarvis HUD failed to start. Check logs/jarvis_hud.log")
 
     print("\nAll Jarvis background daemons are synced and running.")
 
