@@ -97,6 +97,20 @@ def main():
         spoken_part = extract_spoken_part(content_to_speak)
         clean_text = clean_markdown(spoken_part)
         if clean_text:
+            # Check for duplicate playback to prevent double-speaking on hook loop suspension
+            last_spoken_path = os.path.expanduser("~/.jarvis/last_spoken.txt")
+            try:
+                os.makedirs(os.path.dirname(last_spoken_path), exist_ok=True)
+                if os.path.exists(last_spoken_path):
+                    with open(last_spoken_path, "r", encoding="utf-8") as lf:
+                        if lf.read().strip() == clean_text:
+                            print("{}")
+                            return
+                with open(last_spoken_path, "w", encoding="utf-8") as lf:
+                    lf.write(clean_text)
+            except Exception:
+                pass
+
             # Post to the local TTS server on port 20129
             try:
                 data = json.dumps({"text": clean_text}).encode("utf-8")
