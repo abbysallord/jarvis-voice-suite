@@ -75,21 +75,32 @@ def main():
         print("{}")
         return
 
-    # Find the last completion message in the transcript
+    # Find the last completion message in the transcript (must occur after the latest USER_INPUT)
     content_to_speak = ""
     try:
         with open(transcript_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
         
-        # Traverse backwards to find the last planner response with content
-        for line in reversed(lines):
+        steps = []
+        for line in lines:
             try:
-                step = json.loads(line)
-                if step.get("type") == "PLANNER_RESPONSE" and step.get("content"):
-                    content_to_speak = step.get("content")
-                    break
+                steps.append(json.loads(line))
             except Exception:
-                continue
+                pass
+                
+        latest_user_input_idx = -1
+        for idx, step in enumerate(steps):
+            if step.get("type") == "USER_INPUT":
+                latest_user_input_idx = idx
+                
+        latest_planner_response = None
+        if latest_user_input_idx != -1:
+            for step in steps[latest_user_input_idx + 1:]:
+                if step.get("type") == "PLANNER_RESPONSE" and step.get("content"):
+                    latest_planner_response = step.get("content")
+                    
+        if latest_planner_response:
+            content_to_speak = latest_planner_response
     except Exception:
         pass
 
