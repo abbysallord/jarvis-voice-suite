@@ -1,0 +1,13 @@
+# Jarvis User Preferences & Port Bindings
+
+- **Speech Synthesis (TTS)**:
+  - Always default to the `Luna` voice profile.
+  - Apply neural `speed=1.35` and linear pitch correction factor `0.93` to all speech outputs.
+  - Expose/query the local persistent speech server on port `20129`.
+  
+- **Voice Dictation & STT Gating**:
+  - Silence hallucinations (like ghost triggers of "Thank you", "I'm going to go", etc.) should be filtered out by the voice loop before processing.
+  
+- **Hackathon Diagnostics**:
+  - Associate the SIH 2026 diagnostics dashboard on port `20130` using the 20-question SQL schema.
+  - Highlight teammate `Dinesh A` as the designated Team Leader on dashboard views.
