@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import time
 import math
 import tkinter as tk
 
@@ -15,19 +14,25 @@ class JarvisHUD:
         # Borderless, always on top, semi-transparent
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
-        self.root.attributes("-alpha", 0.9)
+        self.root.attributes("-alpha", 0.0)  # Starts invisible
         self.root.configure(bg="#050a18")
         
-        # Position at bottom right corner
+        # Sleek horizontal mini-bar dimensions: 320x52
+        self.width = 320
+        self.height = 52
+        
+        # Initial position: bottom right corner, slightly offset
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
-        self.width = 320
-        self.height = 360
         x = screen_width - self.width - 24
         y = screen_height - self.height - 80
         self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
         
-        # Canvas for premium holographic graphics
+        # Dragging variables
+        self.drag_x = 0
+        self.drag_y = 0
+        
+        # Canvas for HUD graphics
         self.canvas = tk.Canvas(
             self.root, 
             width=self.width, 
@@ -37,16 +42,31 @@ class JarvisHUD:
         )
         self.canvas.pack(fill=tk.BOTH, expand=True)
         
-        # Initial state
+        # Drag bindings to let user move the HUD anywhere on screen
+        self.canvas.bind("<ButtonPress-1>", self.start_drag)
+        self.canvas.bind("<B1-Motion>", self.drag)
+        
+        # State variables
         self.state = "idle"
         self.display_text = ""
         self.angle = 0
-        self.pulse = 0
+        self.pulse = 0.0
         self.pulse_dir = 1
         
-        # State monitoring loop
+        # Start loops
         self.update_state()
         self.draw_loop()
+        
+    def start_drag(self, event):
+        self.drag_x = event.x
+        self.drag_y = event.y
+        
+    def drag(self, event):
+        deltax = event.x - self.drag_x
+        deltay = event.y - self.drag_y
+        x = self.root.winfo_x() + deltax
+        y = self.root.winfo_y() + deltay
+        self.root.geometry(f"+{x}+{y}")
         
     def update_state(self):
         try:
@@ -60,11 +80,11 @@ class JarvisHUD:
         except Exception:
             pass
             
-        # Hide/minimize when idle, show when active
+        # Hide when idle, show when active
         if self.state == "idle":
-            self.root.attributes("-alpha", 0.0) # Fully transparent/invisible
+            self.root.attributes("-alpha", 0.0)
         else:
-            self.root.attributes("-alpha", 0.9) # Make it pop up
+            self.root.attributes("-alpha", 0.85) # High visibility overlay
             
         self.root.after(100, self.update_state)
         
@@ -72,23 +92,22 @@ class JarvisHUD:
         self.canvas.delete("all")
         
         if self.state != "idle":
-            # 1. Background holographic grid lines (cyberpunk style)
-            self.draw_hologram_grid()
+            # 1. Outer holographic pill border
+            self.draw_hud_frame()
             
-            # 2. Main animated indicator
-            cx, cy = self.width // 2, 140
-            
+            # 2. Main visual indicator (Left side)
+            cx, cy = 30, self.height // 2
             if self.state == "listening":
                 self.draw_listening_waves(cx, cy)
             elif self.state == "thinking":
                 self.draw_thinking_loader(cx, cy)
             elif self.state == "speaking":
-                self.draw_speaking_telemetry(cx, cy)
+                self.draw_speaking_waves(cx, cy)
                 
-            # 3. Subtitle / Status Text Display
-            self.draw_status_text()
+            # 3. Horizontal layout text / subtitle (Right side)
+            self.draw_hud_text()
             
-        # Spin and pulse variables
+        # Animate angles & pulses
         self.angle = (self.angle + 4) % 360
         self.pulse += 0.08 * self.pulse_dir
         if self.pulse > 1.0:
@@ -100,77 +119,74 @@ class JarvisHUD:
             
         self.root.after(30, self.draw_loop)
         
-    def draw_hologram_grid(self):
-        # Semi-transparent boundary box
+    def draw_hud_frame(self):
+        # Semi-transparent capsule border
         self.canvas.create_rectangle(
-            5, 5, self.width-5, self.height-5, 
-            outline="#00f0ff", width=1, dash=(4, 8)
+            2, 2, self.width-2, self.height-2, 
+            outline="#00f0ff", width=1, dash=(3, 6)
         )
-        # Tech corners
-        size = 12
-        for x, y in [(5, 5), (self.width-5, 5), (5, self.height-5), (self.width-5, self.height-5)]:
-            dx = size if x == 5 else -size
-            dy = size if y == 5 else -size
-            self.canvas.create_line(x, y, x + dx, y, fill="#00f0ff", width=2)
-            self.canvas.create_line(x, y, x, y + dy, fill="#00f0ff", width=2)
-            
+        # Tech highlights at left and right edges
+        self.canvas.create_line(2, 2, 10, 2, fill="#00f0ff", width=2)
+        self.canvas.create_line(2, 2, 2, 10, fill="#00f0ff", width=2)
+        self.canvas.create_line(self.width-2, 2, self.width-10, 2, fill="#00f0ff", width=2)
+        self.canvas.create_line(self.width-2, 2, self.width-2, 10, fill="#00f0ff", width=2)
+        
+        self.canvas.create_line(2, self.height-2, 10, self.height-2, fill="#00f0ff", width=2)
+        self.canvas.create_line(2, self.height-2, 2, self.height-10, fill="#00f0ff", width=2)
+        self.canvas.create_line(self.width-2, self.height-2, self.width-10, self.height-2, fill="#00f0ff", width=2)
+        self.canvas.create_line(self.width-2, self.height-2, self.width-2, self.height-10, fill="#00f0ff", width=2)
+
     def draw_listening_waves(self, cx, cy):
-        # Pulse expanding cyan sonar rings
-        r1 = 40 + self.pulse * 30
-        r2 = 20 + self.pulse * 15
+        r1 = 12 + self.pulse * 6
+        r2 = 6 + self.pulse * 3
         self.canvas.create_oval(cx-r1, cy-r1, cx+r1, cy+r1, outline="#00a8ff", width=1)
         self.canvas.create_oval(cx-r2, cy-r2, cx+r2, cy+r2, outline="#00f0ff", width=2)
-        self.canvas.create_oval(cx-10, cy-10, cx+10, cy+10, fill="#00f0ff")
+        self.canvas.create_oval(cx-3, cy-3, cx+3, cy+3, fill="#00f0ff")
         
-        # Audio wave indicators radiating from center
-        for i in range(12):
-            angle = i * (360 / 12) + (self.angle / 2)
+        # Tiny expanding waveform lines
+        for i in range(8):
+            angle = i * (360 / 8) + (self.angle / 2)
             rad = math.radians(angle)
-            h = 45 + (15 * math.sin(rad * 4 + self.pulse * 10))
-            x1 = cx + 35 * math.cos(rad)
-            y1 = cy + 35 * math.sin(rad)
+            h = 13 + (5 * math.sin(rad * 2 + self.pulse * 8))
+            x1 = cx + 8 * math.cos(rad)
+            y1 = cy + 8 * math.sin(rad)
             x2 = cx + h * math.cos(rad)
             y2 = cy + h * math.sin(rad)
-            self.canvas.create_line(x1, y1, x2, y2, fill="#00f0ff", width=2)
-            
+            self.canvas.create_line(x1, y1, x2, y2, fill="#00f0ff", width=1.5)
+
     def draw_thinking_loader(self, cx, cy):
-        # Concentric rotating dotted tech rings
-        self.canvas.create_oval(cx-50, cy-50, cx+50, cy+50, outline="#0066aa", width=1)
+        self.canvas.create_oval(cx-14, cy-14, cx+14, cy+14, outline="#0066aa", width=1)
         
-        # Rotating outer arc
+        # Rotating outer arc segment
         self.canvas.create_arc(
-            cx-55, cy-55, cx+55, cy+55, 
-            start=self.angle, extent=60, 
-            outline="#00f0ff", width=3, style=tk.ARC
+            cx-15, cy-15, cx+15, cy+15, 
+            start=self.angle, extent=90, 
+            outline="#00f0ff", width=2, style=tk.ARC
         )
         self.canvas.create_arc(
-            cx-55, cy-55, cx+55, cy+55, 
-            start=self.angle + 180, extent=60, 
-            outline="#00f0ff", width=3, style=tk.ARC
+            cx-15, cy-15, cx+15, cy+15, 
+            start=self.angle + 180, extent=90, 
+            outline="#00f0ff", width=2, style=tk.ARC
         )
         
-        # Reverse rotating inner arc
+        # Inner reverse arc
         self.canvas.create_arc(
-            cx-40, cy-40, cx+40, cy+40, 
+            cx-10, cy-10, cx+10, cy+10, 
             start=-self.angle * 1.5, extent=120, 
-            outline="#00a8ff", width=2, style=tk.ARC
+            outline="#00a8ff", width=1.5, style=tk.ARC
         )
         
-        # Core flashing telemetry
-        flash_color = "#00f0ff" if self.angle % 30 < 15 else "#0066aa"
-        self.canvas.create_oval(cx-15, cy-15, cx+15, cy+15, fill=flash_color)
-        
-    def draw_speaking_telemetry(self, cx, cy):
-        # Simulated digital wave rings
-        r = 50
-        self.canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline="#0066aa", width=1, dash=(2, 4))
-        
-        # Draw active sine waves mirroring speaking
+        # Blinking core
+        flash_color = "#00f0ff" if self.angle % 20 < 10 else "#0066aa"
+        self.canvas.create_oval(cx-4, cy-4, cx+4, cy+4, fill=flash_color)
+
+    def draw_speaking_waves(self, cx, cy):
+        # Draw dynamic horizontal waveforms around center
         points = []
-        for x in range(cx - 80, cx + 80, 2):
+        for x in range(cx - 18, cx + 18, 2):
             dx = x - cx
-            amp = 25 * math.exp(- (dx / 40) ** 2) # Gaussian envelope
-            y = cy + amp * math.sin(dx * 0.15 - self.angle * 0.1)
+            amp = 12 * math.exp(- (dx / 10) ** 2)
+            y = cy + amp * math.sin(dx * 0.4 - self.angle * 0.15)
             points.append((x, y))
             
         for i in range(len(points) - 1):
@@ -180,57 +196,38 @@ class JarvisHUD:
                 fill="#00f0ff", width=2
             )
             
-    def draw_status_text(self):
-        # Display current Jarvis state badge
+    def draw_hud_text(self):
+        # Clean, modern single-line status & subtitle text display
         state_labels = {
-            "listening": "🎙️ JARVIS - LISTENING",
-            "thinking": "⚙️ JARVIS - PROCESSING",
-            "speaking": "🔊 JARVIS - SPEAKING"
+            "listening": "🎙️ LISTENING...",
+            "thinking": "⚙️ PROCESSING...",
+            "speaking": "🔊 JARVIS:"
         }
         label = state_labels.get(self.state, "JARVIS")
         color = "#00f0ff" if self.state == "listening" else ("#00ff66" if self.state == "speaking" else "#ffb300")
         
-        # Header Status Badge
-        self.canvas.create_rectangle(
-            20, 240, self.width-20, 265, 
-            fill="#0c1b3a", outline=color, width=1
-        )
+        # 1. State badge (small capsule)
         self.canvas.create_text(
-            self.width//2, 252, 
-            text=label, fill=color, 
-            font=("Sans", 10, "bold")
+            58, 16, text=label, fill=color, 
+            anchor="w", font=("Sans", 8, "bold")
         )
         
-        # Body text / subtitle
-        text_content = self.display_text if self.state == "speaking" else "Awaiting input..."
+        # 2. Main content/subtitle text
+        text_content = self.display_text if self.state == "speaking" else "Awaiting speech..."
         if self.state == "listening":
-            text_content = "Speak now. The microphone is actively capturing voice input..."
+            text_content = "Speak now... press Enter to submit"
             
-        # Wrap long subtitle text
-        words = text_content.split()
-        lines = []
-        current_line = []
-        for word in words:
-            if len(" ".join(current_line + [word])) > 32:
-                lines.append(" ".join(current_line))
-                current_line = [word]
-            else:
-                current_line.append(word)
-        if current_line:
-            lines.append(" ".join(current_line))
+        # Truncate text if it exceeds single line width
+        max_chars = 34
+        if len(text_content) > max_chars:
+            text_content = text_content[:max_chars-3] + "..."
             
-        # Draw subtitles
-        y_offset = 285
-        for line in lines[:3]: # Limit to 3 lines
-            self.canvas.create_text(
-                self.width//2, y_offset, 
-                text=line, fill="#e2f5ff", 
-                font=("Sans", 9, "italic")
-            )
-            y_offset += 20
+        self.canvas.create_text(
+            58, 34, text=text_content, fill="#e2f5ff", 
+            anchor="w", font=("Sans", 9, "italic")
+        )
 
 def main():
-    # Write initial idle state
     with open(STATE_FILE, "w") as f:
         json.dump({"state": "idle", "text": ""}, f)
         
