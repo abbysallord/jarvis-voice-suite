@@ -44,17 +44,6 @@ cp src/start_jarvis.py "$JARVIS_DIR/start_jarvis.py"
 cp src/speak_completion.py "$JARVIS_DIR/speak_completion.py"
 chmod +x "$JARVIS_DIR/speak_completion.py"
 
-# Update paths inside copied scripts to reference the new local $HOME/.jarvis directory
-sed -i "s|/home/dhanush/Projects/Experiments|$JARVIS_DIR|g" "$JARVIS_DIR/start_jarvis.py"
-sed -i "s|/home/dhanush/Projects/Experiments|$JARVIS_DIR|g" "$JARVIS_DIR/speak_completion.py"
-sed -i "s|/home/dhanush/Projects/Experiments|$JARVIS_DIR|g" "$JARVIS_DIR/dictate_continuous.py"
-sed -i "s|/home/dhanush/Projects/Experiments|$JARVIS_DIR|g" "$JARVIS_DIR/tts_server.py"
-
-# Update static wav paths to match the user's home directory
-sed -i "s|/home/dhanush|$HOME|g" "$JARVIS_DIR/tts_server.py"
-sed -i "s|/home/dhanush|$HOME|g" "$JARVIS_DIR/speak_completion.py"
-sed -i "s|/home/dhanush|$HOME|g" "$JARVIS_DIR/dictate_continuous.py"
-
 # 5. Configure Global Antigravity Lifecycle Hook
 echo "⚙️ Registering global hooks in $CONFIG_DIR/hooks.json..."
 cat <<EOF > "$CONFIG_DIR/hooks.json"
