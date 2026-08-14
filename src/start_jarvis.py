@@ -27,7 +27,7 @@ def check_process_running(script_name):
 
 def start_daemon(command, log_name):
     log_file = open(os.path.join(LOG_DIR, log_name), "a")
-    proc = subprocess.Popen(command, stdout=log_file, stderr=log_file, start_new_session=True)
+    proc = subprocess.Popen(command, stdout=log_file, stderr=log_file, start_new_session=True, env=os.environ.copy())
     return proc
 
 def main():
